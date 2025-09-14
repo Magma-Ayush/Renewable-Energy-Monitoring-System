@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Microgrid Dashboard - Grafana Style</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Link to external stylesheet -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="text-gray-800">
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="sidebar w-16 flex flex-col items-center py-4 space-y-6">
+            <div class="text-blue-400">
+                <i data-lucide="bolt" class="h-8 w-8"></i>
+            </div>
+            <div id="sidebar-nav" class="flex flex-col items-center space-y-4 text-gray-400 w-full">
+                <a href="#" class="sidebar-icon p-3 rounded-lg active" data-view="dashboard" title="Dashboard"><i data-lucide="layout-dashboard" class="h-6 w-6"></i></a>
+                <a href="#" class="sidebar-icon p-3 rounded-lg" data-view="alerts" title="Alerts"><i data-lucide="siren" class="h-6 w-6"></i></a>
+                <a href="#" class="sidebar-icon p-3 rounded-lg" data-view="reports" title="Reports"><i data-lucide="bar-chart-3" class="h-6 w-6"></i></a>
+                <a href="#" class="sidebar-icon p-3 rounded-lg" data-view="settings" title="Settings"><i data-lucide="settings" class="h-6 w-6"></i></a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm w-full p-4 flex justify-between items-center sticky top-0 z-10 border-b border-gray-200">
+                <h1 id="header-title" class="text-xl md:text-2xl font-bold">Microgrid Operations Dashboard</h1>
+                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                    <i data-lucide="clock" class="h-4 w-4"></i>
+                    <span id="current-time"></span>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <main id="dashboard-view" class="view active flex-1 p-4 md:p-6 lg:p-8">
+                <div class="grid grid-cols-12 gap-6">
+
+                    <!-- Generation/Load/Status Cards -->
+                    <div class="col-span-12 lg:col-span-3 panel p-4">
+                        <h3 class="font-semibold text-gray-500 text-sm mb-2">GENERATION</h3>
+                        <div class="flex items-center space-x-2">
+                           <i data-lucide="sun" class="h-7 w-7 text-yellow-500"></i>
+                           <p class="text-3xl font-bold"><span id="total-generation">...</span> kW</p>
+                        </div>
+                    </div>
+                     <div class="col-span-12 lg:col-span-3 panel p-4">
+                        <h3 class="font-semibold text-gray-500 text-sm mb-2">GRID LOAD</h3>
+                        <div class="flex items-center space-x-2">
+                           <i data-lucide="server" class="h-7 w-7 text-green-500"></i>
+                           <p class="text-3xl font-bold"><span id="current-load">...</span> kW</p>
+                        </div>
+                    </div>
+                    <div class="col-span-12 lg:col-span-6 panel p-4">
+                         <h3 class="font-semibold text-gray-500 text-sm mb-2">OVERALL STATUS</h3>
+                         <div class="flex items-center space-x-3">
+                            <span id="grid-status-dot" class="status-dot"></span>
+                            <span id="grid-status-text" class="text-3xl font-bold">...</span>
+                            <span id="grid-status-subtext" class="text-gray-500 mt-1"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Battery Gauge -->
+                    <div class="col-span-12 md:col-span-6 lg:col-span-3 panel p-4 flex flex-col items-center">
+                        <h3 class="font-semibold text-gray-500 text-sm mb-2 w-full text-center">BATTERY SOC</h3>
+                        <div class="relative w-full h-48">
+                            <canvas id="battery-gauge"></canvas>
+                            <div id="battery-gauge-text" class="absolute inset-0 flex items-center justify-center text-4xl font-bold">...%</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Main Time Series Chart -->
+                    <div class="col-span-12 md:col-span-6 lg:col-span-9 panel p-4">
+                         <h3 class="font-semibold text-gray-500 text-sm mb-2">ENERGY TRENDS (LAST 30 MIN)</h3>
+                         <div class="h-56">
+                            <canvas id="energyChart"></canvas>
+                         </div>
+                    </div>
+
+                    <!-- Energy Flow -->
+                    <div class="col-span-12 lg:col-span-5 panel p-4">
+                        <h3 class="font-semibold text-gray-500 text-sm mb-4 text-center">LIVE ENERGY FLOW</h3>
+                        <div class="flex justify-center items-center h-64">
+                             <svg width="100%" height="100%" viewBox="0 0 300 250">
+                                <defs><marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4a5568"/></marker></defs>
+                                <path id="path-gen-center" d="M 50 125 L 140 125" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+                                <path id="path-center-load" d="M 160 125 L 250 125" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+                                <path id="path-center-batt" d="M 150 135 L 150 200" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+                                <path id="path-batt-center" d="M 150 200 L 150 135" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+                                <g>
+                                    <circle cx="50" cy="125" r="25" fill="#fef9c3"/><i-lucide name="sun" x="38" y="113" class="text-yellow-600"/>
+                                    <text x="50" y="160" font-size="12" fill="currentColor" text-anchor="middle">Generation</text>
+                                    <text x="50" y="172" font-size="12" fill="currentColor" text-anchor="middle">Source</text>
+                                </g>
+                                <g>
+                                    <circle cx="250" cy="125" r="25" fill="#dcfce7"/><i-lucide name="home" x="238" y="113" class="text-green-600"/>
+                                    <text x="250" y="160" font-size="12" fill="currentColor" text-anchor="middle">Grid</text>
+                                    <text x="250" y="172" font-size="12" fill="currentColor" text-anchor="middle">Load</text>
+                                </g>
+                                <g>
+                                    <circle cx="150" cy="225" r="25" fill="#dbeafe"/><i-lucide name="battery-full" x="138" y="213" class="text-blue-600"/>
+                                     <text x="150" y="95" font-size="12" fill="currentColor" text-anchor="middle">Battery</text>
+                                     <text x="150" y="107" font-size="12" fill="currentColor" text-anchor="middle">Storage</text>
+                                </g>
+                                <circle id="dot-gen-load" class="flow-dot" r="4" fill="#38a169"><animateMotion dur="3s" repeatCount="indefinite" path="M 50 125 L 250 125"/></circle>
+                                <circle id="dot-to-batt" class="flow-dot" r="4" fill="#4299e1"><animateMotion dur="2s" repeatCount="indefinite" path="M 150 125 L 150 225"/></circle>
+                                <circle id="dot-from-batt" class="flow-dot" r="4" fill="#e53e3e"><animateMotion dur="2s" repeatCount="indefinite" path="M 150 225 L 150 125"/></circle>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-12 lg:col-span-7 panel p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                             <h3 class="font-semibold text-gray-500 text-sm mb-2">EDGE DEVICE STATUS</h3>
+                             <div id="asset-health-grid" class="space-y-3"></div>
+                        </div>
+                        <div>
+                             <h3 class="font-semibold text-gray-500 text-sm mb-2">ALERTS & EVENTS LOG</h3>
+                             <div id="alerts-log" class="space-y-3 h-64 overflow-y-auto pr-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Alerts View -->
+            <main id="alerts-view" class="view flex-1 p-4 md:p-6 lg:p-8">
+                <div class="panel p-6">
+                    <h2 class="text-2xl font-bold mb-4">Detailed Alert History</h2>
+                    <div id="full-alerts-log" class="space-y-4">
+                        <p class="text-gray-500">No alerts have been generated yet.</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Reports View -->
+            <main id="reports-view" class="view flex-1 p-4 md:p-6 lg:p-8">
+                 <div class="panel p-6 text-center">
+                    <i data-lucide="bar-chart-3" class="h-16 w-16 mx-auto text-gray-300 mb-4"></i>
+                    <h2 class="text-2xl font-bold mb-2">Reports & Analytics</h2>
+                    <p class="text-gray-500">This section will contain detailed performance reports, historical data analysis, and compliance documentation. (Coming Soon)</p>
+                </div>
+            </main>
+
+            <!-- Settings View -->
+            <main id="settings-view" class="view flex-1 p-4 md:p-6 lg:p-8">
+                <div class="panel p-6 max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6">System Settings</h2>
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="font-semibold mb-2">Notification Preferences</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-3"><input type="checkbox" class="h-4 w-4 rounded" checked><span>Email alerts for critical faults</span></label>
+                                <label class="flex items-center space-x-3"><input type="checkbox" class="h-4 w-4 rounded"><span>SMS alerts for critical faults</span></label>
+                                <label class="flex items-center space-x-3"><input type="checkbox" class="h-4 w-4 rounded" checked><span>Push notifications for warnings</span></label>
+                            </div>
+                        </div>
+                        <div class="border-t pt-6">
+                            <h3 class="font-semibold mb-2">Theme</h3>
+                            <div class="flex space-x-2">
+                                <button class="px-4 py-2 rounded-md bg-blue-600 text-white font-semibold">Light</button>
+                                <button class="px-4 py-2 rounded-md bg-gray-200 text-gray-700">Dark</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Link to external script -->
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
+
