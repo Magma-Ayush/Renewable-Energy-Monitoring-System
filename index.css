@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f0f2f5; /* Grafana-like light background */
+}
+
+.panel {
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e0e0e0;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-green { background-color: #4CAF50; }
+.status-yellow { background-color: #FFC107; }
+.status-red { background-color: #F44336; }
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: #1a1a1a;
+    transition: width 0.3s ease;
+}
+
+.sidebar-icon {
+    transition: all 0.2s ease;
+}
+
+.sidebar-icon:hover {
+    background-color: #333;
+    color: #66b2ff;
+}
+
+.sidebar-icon.active {
+     background-color: #0d6efd;
+     color: white;
+}
+
+/* Energy flow animation */
+.flow-dot {
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    display: none;
+}
+
+.flow-dot.active {
+    display: block;
+}
+
+/* View switching */
+.view {
+    display: none;
+}
+
+.view.active {
+    display: block;
+}
